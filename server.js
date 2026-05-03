@@ -5,17 +5,11 @@ const { db, initDb } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const IMGBB_API_KEY = process.env.IMGBB_API_KEY || 'e0451b221477d4696d1002e0d7a7adc0';
 
-// Configure multer for image uploads
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, 'uploads'),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
-  }
-});
+// Configure multer to store in memory (we'll upload to ImgBB)
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
@@ -27,10 +21,27 @@ const upload = multer({
   }
 });
 
+// Upload image to ImgBB
+async function uploadToImgBB(fileBuffer) {
+  const base64 = fileBuffer.toString('base64');
+  const formData = new URLSearchParams();
+  formData.append('key', IMGBB_API_KEY);
+  formData.append('image', base64);
+
+  const res = await fetch('https://api.imgbb.com/1/upload', {
+    method: 'POST',
+    body: formData
+  });
+  const data = await res.json();
+  if (data.success) {
+    return data.data.url;
+  }
+  throw new Error('ImgBB upload failed');
+}
+
 app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // List all posts with average rating
 app.get('/api/posts', async (req, res) => {
@@ -54,7 +65,7 @@ app.post('/api/posts', upload.single('image'), async (req, res) => {
   }
   let image = null;
   if (req.file) {
-    image = '/uploads/' + req.file.filename;
+    image = await uploadToImgBB(req.file.buffer);
   } else if (gif_url) {
     image = gif_url;
   }

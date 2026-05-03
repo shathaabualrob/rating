@@ -22,7 +22,8 @@
       "Bash(sh)",
       "Bash(export PATH=\"$HOME/.turso:$PATH\")",
       "Bash(turso_cli --help)",
-      "Bash(tursodb --help)"
+      "Bash(tursodb --help)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
