@@ -11,6 +11,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     body TEXT NOT NULL,
+    image TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -24,5 +25,11 @@ db.exec(`
     UNIQUE(post_id, voter_ip)
   );
 `);
+
+// Migration: add image column if missing
+const columns = db.prepare("PRAGMA table_info(posts)").all().map(c => c.name);
+if (!columns.includes('image')) {
+  db.exec("ALTER TABLE posts ADD COLUMN image TEXT");
+}
 
 module.exports = db;

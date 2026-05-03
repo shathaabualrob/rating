@@ -1,13 +1,36 @@
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
 const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, 'uploads'),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+    if (allowed.test(path.extname(file.originalname))) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images (jpg, png, gif, webp) are allowed'));
+    }
+  }
+});
+
 app.set('trust proxy', true);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // List all posts with average rating
 app.get('/api/posts', (req, res) => {
@@ -23,13 +46,19 @@ app.get('/api/posts', (req, res) => {
   res.json(posts);
 });
 
-// Create a post
-app.post('/api/posts', (req, res) => {
-  const { title, body } = req.body;
+// Create a post (with optional image file or GIF URL)
+app.post('/api/posts', upload.single('image'), (req, res) => {
+  const { title, body, gif_url } = req.body;
   if (!title || !body) {
     return res.status(400).json({ error: 'Title and body are required' });
   }
-  const result = db.prepare('INSERT INTO posts (title, body) VALUES (?, ?)').run(title, body);
+  let image = null;
+  if (req.file) {
+    image = '/uploads/' + req.file.filename;
+  } else if (gif_url) {
+    image = gif_url;
+  }
+  const result = db.prepare('INSERT INTO posts (title, body, image) VALUES (?, ?, ?)').run(title, body, image);
   res.status(201).json({ id: result.lastInsertRowid });
 });
 

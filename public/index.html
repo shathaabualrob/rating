@@ -14,10 +14,30 @@
       <h2>Create a Post</h2>
       <input type="text" id="title" placeholder="Title" maxlength="200">
       <textarea id="body" placeholder="What do you want people to rate?"></textarea>
+      <div class="attach-row">
+        <label class="file-label">
+          <input type="file" id="image" accept="image/*">
+          <span id="file-name">Attach image (optional)</span>
+        </label>
+        <button type="button" id="gif-btn" class="gif-btn">GIF</button>
+      </div>
+      <div id="gif-picker" class="gif-picker hidden">
+        <input type="text" id="gif-search" placeholder="Search GIFs...">
+        <div id="gif-results" class="gif-results"></div>
+      </div>
+      <input type="hidden" id="gif-url">
       <button id="submit-btn">Post</button>
     </div>
 
     <div id="posts"></div>
+
+    <!-- Post detail modal -->
+    <div id="modal" class="modal hidden">
+      <div class="modal-content">
+        <span id="modal-close" class="modal-close">&times;</span>
+        <div id="modal-body"></div>
+      </div>
+    </div>
   </div>
   <script src="/app.js"></script>
 </body>
