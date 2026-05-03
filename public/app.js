@@ -192,6 +192,16 @@ submitBtn.addEventListener('click', async () => {
   submitBtn.disabled = false;
 });
 
+// === REFRESH BUTTON ===
+const refreshBtn = document.getElementById('refresh-btn');
+refreshBtn.addEventListener('click', () => {
+  refreshBtn.classList.add('spinning');
+  currentPage = 1;
+  loadPosts(true).then(() => {
+    setTimeout(() => refreshBtn.classList.remove('spinning'), 600);
+  });
+});
+
 // === TOOLBAR (Search, Sort, Filter) ===
 let toolbarTimeout;
 searchInput.addEventListener('input', () => {
@@ -218,6 +228,8 @@ async function loadPosts(reset = false) {
   const data = await res.json();
 
   if (reset) postsContainer.innerHTML = '';
+
+  lastTotal = data.total;
 
   if (data.posts.length === 0 && currentPage === 1) {
     postsContainer.innerHTML = '<p class="empty">No posts yet. Create one above!</p>';
@@ -390,4 +402,23 @@ const deepLinkPost = urlParams.get('post');
 loadPosts(true).then(() => {
   if (deepLinkPost) openPost(deepLinkPost);
 });
-setInterval(() => loadPosts(true), 15000);
+
+// Poll for new posts (lightweight count check, only refreshes if changed)
+let lastTotal = 0;
+setInterval(async () => {
+  try {
+    const params = new URLSearchParams({
+      sort: sortSelect.value,
+      search: searchInput.value.trim(),
+      category: categoryFilter.value,
+      page: '1'
+    });
+    const res = await fetch(`/api/posts?${params}`);
+    const data = await res.json();
+    if (data.total !== lastTotal) {
+      lastTotal = data.total;
+      currentPage = 1;
+      loadPosts(true);
+    }
+  } catch (e) {}
+}, 10000);
