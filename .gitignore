@@ -1,0 +1,4 @@
+node_modules/
+rating.db
+rating.db-shm
+rating.db-wal
