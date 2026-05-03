@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Rate It</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .admin-login {
+      max-width: 320px;
+      margin: 4rem auto;
+      text-align: center;
+    }
+    .admin-login input {
+      width: 100%;
+      padding: 0.7rem;
+      margin: 1rem 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .admin-login button {
+      width: 100%;
+      padding: 0.7rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .admin-post {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+    .admin-post .info h3 {
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+    .admin-post .info span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .admin-post .actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .admin-post .actions button {
+      padding: 0.4rem 0.8rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-pin {
+      background: var(--star);
+      color: #fff;
+    }
+    .btn-delete {
+      background: var(--danger);
+      color: #fff;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .admin-header a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="login-view" class="admin-login">
+      <h1>Admin Login</h1>
+      <input type="password" id="password" placeholder="Enter admin password">
+      <button id="login-btn">Login</button>
+      <p id="login-error" style="color:var(--danger);margin-top:0.5rem;display:none;"></p>
+    </div>
+
+    <div id="admin-view" style="display:none;">
+      <div class="admin-header">
+        <h1>Admin Panel</h1>
+        <a href="/">← Back to site</a>
+      </div>
+      <div id="admin-posts"></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    const token = sessionStorage.getItem('admin_token');
+    if (token) showAdmin();
+
+    document.getElementById('login-btn').addEventListener('click', login);
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') login();
+    });
+
+    async function login() {
+      const password = document.getElementById('password').value;
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        sessionStorage.setItem('admin_token', data.token);
+        showAdmin();
+      } else {
+        const err = document.getElementById('login-error');
+        err.textContent = 'Invalid password';
+        err.style.display = 'block';
+      }
+    }
+
+    function showAdmin() {
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('admin-view').style.display = 'block';
+      loadAdminPosts();
+    }
+
+    async function loadAdminPosts() {
+      const container = document.getElementById('admin-posts');
+      container.innerHTML = '<div class="spinner"></div>';
+
+      const res = await fetch('/api/posts?page=1');
+      const data = await res.json();
+
+      // Load all pages
+      let posts = data.posts;
+      let page = 2;
+      let hasMore = data.hasMore;
+      while (hasMore) {
+        const r = await fetch(`/api/posts?page=${page}`);
+        const d = await r.json();
+        posts = posts.concat(d.posts);
+        hasMore = d.hasMore;
+        page++;
+      }
+
+      container.innerHTML = posts.map(post => `
+        <div class="admin-post" data-id="${post.id}">
+          <div class="info">
+            <h3>${escapeHtml(post.title)}</h3>
+            <span>${post.category} · ${post.rating_count} ratings · avg ${Number(post.avg_rating).toFixed(1)}</span>
+          </div>
+          <div class="actions">
+            <button class="btn-pin" onclick="togglePin(${post.id})">${post.pinned ? '📌 Unpin' : '📌 Pin'}</button>
+            <button class="btn-delete" onclick="deletePost(${post.id})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function togglePin(id) {
+      const t = sessionStorage.getItem('admin_token');
+      const res = await fetch(`/api/admin/posts/${id}/pin`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${t}` }
+      });
+      if (res.ok) {
+        showToast('Pin toggled');
+        loadAdminPosts();
+      }
+    }
+
+    async function deletePost(id) {
+      if (!confirm('Delete this post? This cannot be undone.')) return;
+      const t = sessionStorage.getItem('admin_token');
+      const res = await fetch(`/api/admin/posts/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${t}` }
+      });
+      if (res.ok) {
+        showToast('Post deleted');
+        loadAdminPosts();
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Apply saved theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+</body>
+</html>

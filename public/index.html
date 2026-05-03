@@ -8,12 +8,25 @@
 </head>
 <body>
   <div class="container">
-    <h1>Rate It</h1>
+    <div class="header">
+      <h1>Rate It</h1>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">🌙</button>
+    </div>
 
     <div class="create-form">
       <h2>Create a Post</h2>
       <input type="text" id="title" placeholder="Title" maxlength="200">
       <textarea id="body" placeholder="What do you want people to rate?"></textarea>
+      <div class="form-row">
+        <select id="category">
+          <option value="general">General</option>
+          <option value="food">Food</option>
+          <option value="music">Music</option>
+          <option value="movies">Movies</option>
+          <option value="tech">Tech</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
       <div class="attach-row">
         <label class="file-label">
           <input type="file" id="image" accept="image/*">
@@ -26,10 +39,29 @@
         <div id="gif-results" class="gif-results"></div>
       </div>
       <input type="hidden" id="gif-url">
-      <button id="submit-btn">Post</button>
+      <button class="submit-btn" id="submit-btn">Post</button>
+    </div>
+
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search posts...">
+      <select id="sort">
+        <option value="newest">Newest</option>
+        <option value="highest">Highest Rated</option>
+        <option value="most">Most Rated</option>
+      </select>
+      <select id="category-filter">
+        <option value="">All Categories</option>
+        <option value="general">General</option>
+        <option value="food">Food</option>
+        <option value="music">Music</option>
+        <option value="movies">Movies</option>
+        <option value="tech">Tech</option>
+        <option value="other">Other</option>
+      </select>
     </div>
 
     <div id="posts"></div>
+    <button id="load-more" class="load-more hidden">Load More</button>
 
     <!-- Post detail modal -->
     <div id="modal" class="modal hidden">
@@ -39,6 +71,8 @@
       </div>
     </div>
   </div>
+
+  <div class="toast-container" id="toast-container"></div>
   <script src="/app.js"></script>
 </body>
 </html>
